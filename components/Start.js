@@ -12,6 +12,7 @@ const Start = ({ navigation }) => {
   const [name, setName] = useState("");
   const [selectedColor, setSelectedColor] = useState();
   const colorOptions = ["#090C08", "#474056", "#8A95A5", "#B9C6AE"];
+  const colorLabels = ["Black", "Purple", "Blue", "Green"];
 
   useEffect(() => {
     navigation.setOptions({ headerShown: false });
@@ -23,13 +24,20 @@ const Start = ({ navigation }) => {
       source={require("../assets/background-image.png")}
       resizeMode="cover"
     >
-      <Text style={styles.title}>Let's Chat!</Text>
+      <Text style={styles.title} accessibilityLabel="App title: Let's Chat">
+        Let's Chat!
+      </Text>
       {/* Container with white background. Every elements are wrapped 
       inside seperate containers for better responsive behavior*/}
-      <View style={styles.container}>
+      <View
+        accessible
+        accessibilityLabel="White container"
+        style={styles.container}
+      >
         {/* Container for the input field */}
         <View style={styles.inputContainer}>
           <TextInput
+            accessibilityLabel="Username input field"
             style={styles.textInput}
             value={name}
             onChangeText={setName}
@@ -37,11 +45,19 @@ const Start = ({ navigation }) => {
           />
         </View>
         {/* Container for the color selection */}
-        <View style={styles.colorContainer}>
+        <View
+          style={styles.colorContainer}
+          accessible
+          accessibilityLabel="Background color selection"
+          accessibilityHint="Click on a button to set the background color of the chat window"
+        >
           <Text style={styles.colorText}>Choose Background Color</Text>
-          <View style={styles.colorButtonContainer}>
-            {colorOptions.map((color) => (
+          <View
+            style={styles.colorButtonContainer}
+          >
+            {colorOptions.map((color, index) => (
               <TouchableOpacity
+                accessibilityLabel={`Color: ${colorLabels[index]}`}
                 key={`color-button__${color}`}
                 title="Got to Screen 2"
                 style={[
@@ -60,6 +76,8 @@ const Start = ({ navigation }) => {
         {/* Container for the "Start Chatting" button */}
         <View style={styles.buttonContainer}>
           <TouchableOpacity
+            accessibilityLabel="Start chat button"
+            accessibilityHint="Start the chat by pressing the button"
             style={styles.button}
             onPress={() =>
               navigation.navigate("Chat", {
