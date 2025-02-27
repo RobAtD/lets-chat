@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import {
+  Alert,
   ImageBackground,
   StyleSheet,
   Text,
@@ -7,8 +8,25 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { getAuth, signInAnonymously } from "firebase/auth";
 
 const Start = ({ navigation }) => {
+  // Initialize Firebase Authentication handler
+  const auth = getAuth();
+  const signInUser = () => {
+    signInAnonymously(auth)
+      .then((result) => {
+        navigation.navigate("Chat", {
+          userID: result.user.uid,
+          name: name,
+          backgroundColor: selectedColor,
+        });
+      })
+      .catch((error) => {
+        Alert.alert("Failed to sign in. Error: ", error);
+      });
+  };
+
   const [name, setName] = useState("");
   const [selectedColor, setSelectedColor] = useState();
   const colorOptions = ["#090C08", "#474056", "#8A95A5", "#B9C6AE"];
@@ -52,9 +70,7 @@ const Start = ({ navigation }) => {
           accessibilityHint="Click on a button to set the background color of the chat window"
         >
           <Text style={styles.colorText}>Choose Background Color</Text>
-          <View
-            style={styles.colorButtonContainer}
-          >
+          <View style={styles.colorButtonContainer}>
             {colorOptions.map((color, index) => (
               <TouchableOpacity
                 accessibilityLabel={`Color: ${colorLabels[index]}`}
@@ -79,12 +95,7 @@ const Start = ({ navigation }) => {
             accessibilityLabel="Start chat button"
             accessibilityHint="Start the chat by pressing the button"
             style={styles.button}
-            onPress={() =>
-              navigation.navigate("Chat", {
-                name: name,
-                backgroundColor: selectedColor,
-              })
-            }
+            onPress={signInUser}
           >
             <Text style={styles.buttonText}>Start Chatting</Text>
           </TouchableOpacity>
