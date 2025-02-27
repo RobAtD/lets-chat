@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   addDoc,
   collection,
@@ -12,36 +13,79 @@ import {
   Day,
   GiftedChat,
   SystemMessage,
+  InputToolbar
 } from "react-native-gifted-chat";
 
-const Chat = ({ db, route, navigation }) => {
+const Chat = ({ db, route, navigation, isConnected }) => {
   // Get the user params
   const { userID, backgroundColor, name } = route.params;
   const [messages, setMessages] = useState([]);
+  let unsubMessages;
 
   useEffect(() => {
     // Sets the username as navigation bar title
     navigation.setOptions({ title: name });
 
-    // Query that sorts the messages in descending order for the Snapshot
-    const q = query(collection(db, "messages"), orderBy("createdAt", "desc"));
+    if(isConnected === true){
+      // unregister current onSnapshot() listener to avoid registering multiple listeners when
+      // useEffect code is re-executed.
+      if(unsubMessages) unsubMessages();
+      unsubMessages = null;
 
-    // Snapshot that targets the messages db through the defined query
-    const unsubMessages = onSnapshot(q, (documentsSnapshot) => {
-      let newMessages = [];
-      documentsSnapshot.forEach((doc) => {
-        newMessages.push({
-          id: doc.id,
-          ...doc.data(),
-          createdAt: new Date(doc.data().createdAt.toMillis()),
+      // Query that sorts the messages in descending order for the Snapshot
+      const q = query(collection(db, "messages"), orderBy("createdAt", "desc"));
+
+      // Snapshot that targets the messages db through the defined query
+      unsubMessages = onSnapshot(q, (documentsSnapshot) => {
+        let newMessages = [];
+        documentsSnapshot.forEach((doc) => {
+          newMessages.push({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: new Date(doc.data().createdAt.toMillis()),
+          });
         });
+        cacheMessages(newMessages);
+        setMessages(newMessages);
       });
-      setMessages(newMessages);
-    });
+    } else loadCachedMessages();
     return () => {
       if (unsubMessages) unsubMessages();
     };
-  }, []);
+  }, [isConnected]);
+
+  /**
+   * Handler to cache messages to the device
+   * @param messagesToCache The messages array to set to the cache
+   */
+  const cacheMessages = async (messagesToCache) => {
+    try {
+      await AsyncStorage.setItem(
+        "messages_list",
+        JSON.stringify(messagesToCache)
+      );
+    } catch (error) {
+      console.log(error.message);
+    }
+  };
+
+  /**
+   * Handler to load cached messages when there is no internet connection
+   */
+  const loadCachedMessages = async () => {
+    const cachedMessages = (await AsyncStorage.getItem("messages_list")) || [];
+    setMessages(JSON.parse(cachedMessages));
+  };
+
+  /**
+   * Handler to render the InputToolbar
+   * @param props The default props of InputToolbar 
+   * @returns InputToolbar if internet connection is available, otherwise null
+   */
+  const renderInputToolbar = (props) => {
+    if (isConnected) return <InputToolbar {...props} />;
+    else return null;
+  };
 
   /**
    * Handler to append new messages to the messages array
@@ -53,7 +97,7 @@ const Chat = ({ db, route, navigation }) => {
 
   /**
    * Handler to customize the chat bubbles
-   * @param props The default props of of <Bubble>
+   * @param props The default props of <Bubble>
    * @returns Custom Chat Bubbles
    */
   const renderBubble = (props) => {
@@ -111,6 +155,7 @@ const Chat = ({ db, route, navigation }) => {
         renderBubble={renderBubble}
         renderSystemMessage={renderSystemMessage}
         renderDay={renderDay}
+        renderInputToolbar={renderInputToolbar}
         onSend={(messages) => onSend(messages)}
         user={{
           _id: userID,
