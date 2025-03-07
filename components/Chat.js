@@ -15,8 +15,10 @@ import {
   SystemMessage,
   InputToolbar
 } from "react-native-gifted-chat";
+import CustomActions from "./CustomActions";
+import MapView from "react-native-maps";
 
-const Chat = ({ db, route, navigation, isConnected }) => {
+const Chat = ({ db, storage, route, navigation, isConnected }) => {
   // Get the user params
   const { userID, backgroundColor, name } = route.params;
   const [messages, setMessages] = useState([]);
@@ -26,10 +28,10 @@ const Chat = ({ db, route, navigation, isConnected }) => {
     // Sets the username as navigation bar title
     navigation.setOptions({ title: name });
 
-    if(isConnected === true){
+    if (isConnected === true) {
       // unregister current onSnapshot() listener to avoid registering multiple listeners when
       // useEffect code is re-executed.
-      if(unsubMessages) unsubMessages();
+      if (unsubMessages) unsubMessages();
       unsubMessages = null;
 
       // Query that sorts the messages in descending order for the Snapshot
@@ -41,6 +43,7 @@ const Chat = ({ db, route, navigation, isConnected }) => {
         documentsSnapshot.forEach((doc) => {
           newMessages.push({
             id: doc.id,
+            location: doc.data().location || null,
             ...doc.data(),
             createdAt: new Date(doc.data().createdAt.toMillis()),
           });
@@ -79,7 +82,7 @@ const Chat = ({ db, route, navigation, isConnected }) => {
 
   /**
    * Handler to render the InputToolbar
-   * @param props The default props of InputToolbar 
+   * @param props The default props of InputToolbar
    * @returns InputToolbar if internet connection is available, otherwise null
    */
   const renderInputToolbar = (props) => {
@@ -148,6 +151,47 @@ const Chat = ({ db, route, navigation, isConnected }) => {
     );
   };
 
+  /**
+   * Handler to customize the actions for the plus button
+   * @param props The default props of for renderActions
+   * @returns <CustomActions> component for choosing and taking
+   * images and sending the users location
+   */
+  const renderCustomActions = (props) => {
+    return (
+      <CustomActions
+        onSend={onSend}
+        storage={storage}
+        userID={userID}
+        userName={name}
+        {...props}
+      />
+    );
+  };
+
+  /**
+   * Helper to display the location of a user
+   * @param props The default props for renderCustomView
+   * @returns <MapView> for showing the user's location
+   */
+  const renderCustomView = (props) => {
+    const { currentMessage } = props;
+    if (currentMessage.location) {
+      return (
+        <MapView
+          style={{ width: 150, height: 100, borderRadius: 13, margin: 3 }}
+          region={{
+            latitude: currentMessage.location.latitude,
+            longitude: currentMessage.location.longitude,
+            latitudeDelta: 0.0922,
+            longitudeDelta: 0.0421,
+          }}
+        />
+      );
+    }
+    return null;
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: backgroundColor }]}>
       <GiftedChat
@@ -156,6 +200,8 @@ const Chat = ({ db, route, navigation, isConnected }) => {
         renderSystemMessage={renderSystemMessage}
         renderDay={renderDay}
         renderInputToolbar={renderInputToolbar}
+        renderActions={renderCustomActions}
+        renderCustomView={renderCustomView}
         onSend={(messages) => onSend(messages)}
         user={{
           _id: userID,
